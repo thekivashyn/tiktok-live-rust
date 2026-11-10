@@ -9,6 +9,7 @@ Recorded 2026-11-10, Asia/Saigon. Scope: public source following commit
 | --- | --- | --- |
 | First meaningful run required a channel currently LIVE | A visitor could not reproduce event output from the repository alone | Added an offline synthetic wire/decoder/processor demo with a regression for dedupe, large IDs and cumulative gift deltas |
 | Cross-language integration had prose but no working example | Sequential pipe consumption can block a child; cancellation/exit failures are easy to miss | Added a Python consumer with concurrent drains, bounded line buffers, a host deadline, cleanup and aggregate-only output |
+| CLI preflight failures can precede structured diagnostics | A JSON-only stderr consumer misclassifies invalid input as corrupt output | Python counts plain diagnostics without saving contents and preserves the child's nonzero exit code; verified with an invalid username before any network access |
 | Manifest hashes were maintained manually without a CI check | Documentation or source updates could silently invalidate the published manifest | Added manifest/link checking and explicit manifest refresh; CI now runs it |
 | Export filters excluded new Python examples/tests and vector assets | A future standalone copy could lose its onboarding or checks | Extended only the relevant suffix lists and added export-content/hash regressions |
 | CI used Cargo to rerun an already-built CLI | Target-feature differences could cause unnecessary recompilation for help/version | Invoke the built executable directly; include an offline Python-to-Rust demo check |
@@ -56,7 +57,7 @@ failed despite matching file contents. The exporter now sorts explicit relative
 POSIX strings. A regression reproduced the ordering failure on Windows before
 the fix and passes after it. The failed CI run remains part of the record.
 
-The change adds one Rust example regression and eight Python integration/export
+The change adds one Rust example regression and nine Python integration/export
 regressions. Python tests use real owned subprocesses with synthetic data,
 including stderr backpressure, a >64 KiB additive event, nonzero exits, malformed
 output and deadline cleanup. Export tests use a temporary synthetic repository.

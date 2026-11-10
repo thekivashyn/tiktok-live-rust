@@ -35,6 +35,14 @@ print(json.dumps({'type':'report','data':{'stop_reason':'duration','error':None}
         self.assertEqual(result["exit_code"], 7)
         self.assertEqual(result["error_code"], "no_events")
 
+    async def test_plain_preflight_diagnostics_preserve_the_exit_status(self):
+        script = "import sys; print('Error: provide --user or --room',file=sys.stderr); sys.exit(2)"
+        result = await consumer.consume([sys.executable, "-c", script], timeout=5)
+        self.assertEqual(result["exit_code"], 2)
+        self.assertEqual(result["unstructured_diagnostics"], 1)
+        self.assertIsNone(result["error_code"])
+        self.assertNotIn("provide", str(result))
+
     async def assert_child_cleaned_up(self, script, timeout, error_type):
         children = []
         original = asyncio.create_subprocess_exec

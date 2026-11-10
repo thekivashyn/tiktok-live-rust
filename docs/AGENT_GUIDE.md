@@ -47,6 +47,7 @@ acceptance is not guaranteed.
 | stderr `type: status` | Latest health snapshot; intermediate snapshots may coalesce |
 | stderr `type: report` | Final aggregate report; inspect `error`, output counters and exit code |
 | Nonzero exit | Surface failure; preserve the structured code rather than assuming success from earlier events |
+| Plain stderr before engine startup | CLI validation/setup may fail before JSON reporting; count diagnostics and preserve exit status without inventing an engine error code |
 | `connection_epoch` changes | Treat the boundary as a possible source gap |
 | Gift `quantity_delta: null` | Preserve unknown quantity; never substitute a complete total |
 | `metadata_incomplete: true` | Core event survived, optional metadata failed validation |

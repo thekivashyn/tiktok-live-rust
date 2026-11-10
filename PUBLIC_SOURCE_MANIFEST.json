@@ -32,7 +32,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "ce2191a30ae08a7ff5793a3fe0c7e81b3b4d20bf86202c0885ab4480c52a0026"
+      "sha256": "27e963537990b81bdf949f426365bee28eae1f0fb56a79b3c91d3532e3084f42"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -136,7 +136,7 @@
     },
     {
       "path": "docs/AGENT_GUIDE.md",
-      "sha256": "7513a94044c73ab9525c951a31b0489987ec17db20d4d32808cc17c2f3a07e7a"
+      "sha256": "2bf5a343f44897a6480af55c9e8adda2dd4526f3808c68a6bcc1dcbea4ccc390"
     },
     {
       "path": "docs/ARCHITECTURE.md",
@@ -156,7 +156,7 @@
     },
     {
       "path": "docs/SECOND_AUDIT.md",
-      "sha256": "4da80d70e2ec4ed70414472aee3a7efcb2fc68c3b91c9686644c4191317cfff4"
+      "sha256": "3b1b8c77be4c9f8a578a42fd63d87d79dbffcce17af5cb15ef25dc553ab226a7"
     },
     {
       "path": "docs/USAGE.md",
@@ -180,7 +180,7 @@
     },
     {
       "path": "examples/consume.py",
-      "sha256": "b711a47d8c0790121b71c1e68f5dd3fa3eeb9a2e389d995ae0fa67a95a48bc20"
+      "sha256": "1ede2d197d2a820efffeeefa57ca13aa4b67888d8b7d55ffbb913bbe97cb9368"
     },
     {
       "path": "examples/consume.rs",
@@ -360,7 +360,7 @@
     },
     {
       "path": "tests/test_integration.py",
-      "sha256": "567d1a92bfbe5a47887347a05d445bb6a6c6d0cecb97ff6fbbe15c737093fe90"
+      "sha256": "1d8b0be3a7709e58167da9a7d4463012f579e4ac60d80cf4b0bf278f01b37bc6"
     },
     {
       "path": "tests/test_publication.py",

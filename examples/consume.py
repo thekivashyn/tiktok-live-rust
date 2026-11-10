@@ -15,7 +15,8 @@ async def consume(command, timeout=75):
         *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
         limit=512 * 1024)
     counts = Counter()
-    health = {"last_state": None, "stop_reason": None, "error_code": None}
+    health = {"last_state": None, "stop_reason": None, "error_code": None,
+              "unstructured_diagnostics": 0}
 
     async def events():
         async for line in process.stdout:
@@ -30,7 +31,16 @@ async def consume(command, timeout=75):
 
     async def diagnostics():
         async for line in process.stderr:
-            record = json.loads(line)
+            # Argument/startup failures can precede structured engine output.
+            # Count such diagnostics without retaining their contents.
+            try:
+                record = json.loads(line)
+            except (ValueError, UnicodeDecodeError):
+                health["unstructured_diagnostics"] += 1
+                continue
+            if not isinstance(record, dict) or not isinstance(record.get("data"), dict):
+                health["unstructured_diagnostics"] += 1
+                continue
             data = record.get("data", {})
             if record.get("type") == "status":
                 health["last_state"] = data.get("state")
