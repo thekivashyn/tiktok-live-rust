@@ -1,0 +1,22 @@
+/target/
+/reports/
+__pycache__/
+/.build-tools-root
+/benchmarks/connector/node_modules/
+
+# Local credentials, tools, editor state and prepared source exports.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+/.tools/
+/.public-export/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
