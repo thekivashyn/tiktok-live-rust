@@ -17,6 +17,35 @@ by Git and may be absent in another checkout; summaries here remain readable.
 
 ## Unreleased
 
+### Follow-up audit and runnable onboarding — 2026-11-10
+
+- Audited transport/input bounds, decoder cancellation, retry/readiness/queue
+  handling, per-room state, optional metadata, CLI streams and publication tooling.
+  Findings and retained limits are in `docs/SECOND_AUDIT.md`; no confirmed core
+  Rust runtime defect requiring a change was found in the reviewed paths.
+- Reworked README around a local SVG introduction, runnable offline/LIVE starts,
+  Python/Rust/agent integration paths and explicitly versioned benchmark evidence.
+  Added `docs/AGENT_GUIDE.md`, including machine output and untrusted-content rules.
+- Added `examples/offline_demo.rs`: seven synthetic wire messages become six
+  events through the actual bounded decoder/processor, with dedupe and gift deltas.
+  Added `examples/consume.py`: concurrent pipe drains, bounded line reads, a host
+  deadline, explicit child cleanup and aggregate-only output.
+- Added automatic source-manifest/local-link checks and seven real-subprocess /
+  synthetic-export Python regressions. Expanded export filters for the new Python
+  examples/tests and SVG asset. CI runs them and the offline Rust-to-Python demo;
+  help/version invoke the built CLI directly to avoid redundant Cargo rebuilds.
+- Compatibility: examples, documentation and tooling only. Engine API/schema,
+  core Rust source, registry dependencies and 0.8.0 version remain unchanged.
+- Local validation: 91 Rust tests and seven Python regressions passed; all-target
+  Clippy with denied warnings, formatting and release CLI/examples build passed.
+  The release offline demo emitted six valid events with known gift deltas 1/2;
+  the Python consumer received all six and exited successfully. Manifest/local-link
+  checks passed for 92 selected files. SVG XML was checked and its rendered preview
+  visually reviewed. Core source/old Rust tests/Cargo.lock remain unchanged.
+- Fresh three-platform CI is required for the new integration/check commands;
+  observe that run before handoff. No new LIVE sample or performance benchmark;
+  historical measurements stay historical.
+
 ### Initial GitHub publication — 2026-11-10
 
 - Repository supplied by the owner: `https://github.com/thekivashyn/tiktok-live-rust`.

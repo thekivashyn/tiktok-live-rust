@@ -14,6 +14,7 @@ and comparative benchmark harness. None is required by the production CLI.
 | Metadata model maintenance | `generate_metadata_models.py` | Local selected field table; generates engine model files, so review its diff |
 | Historical investigations | `compare_engine.py`, `compare_performance.py`, `compare_soak.py`, `compare_watchdog.py`, `watchdog_pause.py`, `check_empty_chat_parity.py`, `summarize*.py` | Some require archived executables or named reports excluded from a clean checkout; not general CI commands |
 | Publication export | `prepare_public_repo.py` | Creates a fresh local source copy using a fixed file list; does not initialize Git or upload anything |
+| Publication integrity | `check_repository.py` | Offline manifest hashes and local Markdown file targets; `--update-manifest` explicitly refreshes intended changes |
 
 Use fresh labels/directories for measurements. The existing dependency helper
 replaces its default report, so preserve any previous report before rerunning it.

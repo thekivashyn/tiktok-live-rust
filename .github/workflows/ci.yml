@@ -23,6 +23,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Check source manifest and documentation
+        run: python scripts/check_repository.py
+      - name: Test subprocess integration and publication helpers
+        run: python -m unittest discover -s tests -p "test_*.py" -v
       - name: Install Linux native TLS dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev
@@ -41,6 +45,8 @@ jobs:
       - name: Build CLI and examples
         run: cargo build --release --examples --bins --locked
       - name: Check CLI help
-        run: cargo run --release --locked -- --help
+        run: ./target/release/tiktok-live-rust --help
       - name: Check CLI version
-        run: cargo run --release --locked -- --version
+        run: ./target/release/tiktok-live-rust --version
+      - name: Run offline wire demo through Python consumer
+        run: python examples/consume.py --demo

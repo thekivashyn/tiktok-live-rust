@@ -15,8 +15,9 @@ ROOT_FILES = (
 )
 # Directory + permitted suffixes: unknown extensions never enter the export.
 TREES = {
-    "src": {".rs"}, "tests": {".rs"}, "examples": {".rs"},
+    "src": {".rs"}, "tests": {".rs", ".py"}, "examples": {".rs", ".py"},
     "docs": {".md"}, "scripts": {".py", ".md"},
+    "docs/assets": {".svg"},
     "benchmarks/connector": {".py", ".mjs", ".json", ".md"},
     ".github": {".yml", ".yaml", ".md"},
 }

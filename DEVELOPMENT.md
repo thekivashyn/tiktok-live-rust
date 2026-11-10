@@ -29,6 +29,12 @@ If evidence is unavailable, say so rather than treating a summary as a fresh tes
 These are development/release notes, not a request for runtime event logging.
 Do not enable persistent raw LIVE payload, identity or chat logging by default.
 
+Publication integrity is checked by `python scripts/check_repository.py` in CI.
+After reviewing intended changes, refresh hashes with `--update-manifest` and
+rerun the checker. Run the Python integration/export regressions with
+`python -m unittest discover -s tests -p "test_*.py" -v` when changing these tools.
+Python checks use only synthetic fixtures and owned subprocesses, never TikTok.
+
 ## For each change
 
 1. Confirm the manifest version and the newest history entry. Read the relevant

@@ -20,7 +20,7 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "7e0d8df4dd71226ff42d2d49c646bcbd42eea19e59a9304c63dcb776e072e287"
+      "sha256": "63120b15402a1c8b5cf5120d9f3b6afeab92d51254c51e6bbe28d91633a7967e"
     },
     {
       "path": ".gitignore",
@@ -104,23 +104,31 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "9aaa42a4d21670454fb38c2498b5533053b6b83c0452513885e3ff701f64363d"
+      "sha256": "088527d188bc525d4b31f0d6a2485ba014a3de2a2a468157d4937bfa8c16cdaf"
     },
     {
       "path": "CONTRIBUTING.md",
-      "sha256": "0dffd4fdb1c7cff22c37ff9fc61c66e900eb8f29a7d183cf2955b877ba0d68db"
+      "sha256": "d95cee7db52ce91e671713f91cb571a611531d8e032d5090fc8f88458f834372"
     },
     {
       "path": "DEVELOPMENT.md",
-      "sha256": "63f0f8924deb541fa4ce4032b90a5254e56ac7a6d187032a4122ae10c4ff8bba"
+      "sha256": "3ea5a418b7a834b8e6899579791c3ab3b8a1e3b81903c5991904baac680fef0d"
     },
     {
       "path": "dlltool.cmd",
       "sha256": "1ef56d7b92de33f44a1283d6bc62a6ff27029685b0cd37207e868c99e69786ef"
     },
     {
+      "path": "docs/AGENT_GUIDE.md",
+      "sha256": "7513a94044c73ab9525c951a31b0489987ec17db20d4d32808cc17c2f3a07e7a"
+    },
+    {
       "path": "docs/ARCHITECTURE.md",
       "sha256": "25ccfe7a94a26cc2c7c5ff007cc692efa4398c9a9aad9406132d54065e6e8f3e"
+    },
+    {
+      "path": "docs/assets/hero.svg",
+      "sha256": "9d27b7e5f820f294324fbe66060ac9366e0c20402982bc1a36d71a064d576a94"
     },
     {
       "path": "docs/ENGINE_NOTES.md",
@@ -133,6 +141,10 @@
     {
       "path": "docs/PUBLICATION_AUDIT.md",
       "sha256": "4f65930cebab8ca82620491b66516855fadafe32e1adb3527e04b0d75b6d2418"
+    },
+    {
+      "path": "docs/SECOND_AUDIT.md",
+      "sha256": "627721a7d85739bb10fd2542250aab28f341fa9416cd9834912d41764a9d29ca"
     },
     {
       "path": "docs/USAGE.md",
@@ -149,6 +161,10 @@
     {
       "path": "examples/bench_pipeline.rs",
       "sha256": "c3fee6db9162bf63e5bb57bc285b7b0ee77958e7edf84d2f4b6409ba0a25c821"
+    },
+    {
+      "path": "examples/consume.py",
+      "sha256": "b711a47d8c0790121b71c1e68f5dd3fa3eeb9a2e389d995ae0fa67a95a48bc20"
     },
     {
       "path": "examples/consume.rs",
@@ -179,6 +195,10 @@
       "sha256": "c212a3b9a701b24192b9bccc4a8ac1d2d4bbdf6876953df032e490b959737e35"
     },
     {
+      "path": "examples/offline_demo.rs",
+      "sha256": "dd3d47baec165e16515a740997ade78f1a563851c576f659251d76cd463a706a"
+    },
+    {
       "path": "examples/reconnect_probe.rs",
       "sha256": "4dcc5532317023b172813f08ca21e20f35c9a0bb9d4d728e927be0dfd625e5c8"
     },
@@ -196,7 +216,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "587c73e7adeee0d404521ad2a4d797aff376096b10b382d0dd1c0522ad0fc064"
+      "sha256": "1ef32f8b48480d77ea73ac9d0e7f7c12ded23b1b71e3eb9acf971526802b3214"
     },
     {
       "path": "run.ps1",
@@ -213,6 +233,10 @@
     {
       "path": "scripts/check_metadata.py",
       "sha256": "b3a01ace35daf9f402ea977959a2c122d257e6934abca6555b8e9dfe59b005f5"
+    },
+    {
+      "path": "scripts/check_repository.py",
+      "sha256": "ec7ba006bc31dd3b0a7d35c9901904141a62fe9f4b0ee145aa6f12eeb38e4410"
     },
     {
       "path": "scripts/compare_engine.py",
@@ -244,7 +268,7 @@
     },
     {
       "path": "scripts/prepare_public_repo.py",
-      "sha256": "a5db4d5a93c0e765e227f6cffe4a434ddac88a2b0fc4a1da5b1b2f68cc1fd185"
+      "sha256": "5197bfb09c591bb37df4ab538c9e200f6ffd9c68f509d446891d09c4392b41b6"
     },
     {
       "path": "scripts/probe_blocked_status.py",
@@ -252,7 +276,7 @@
     },
     {
       "path": "scripts/README.md",
-      "sha256": "5678cee84d856dded8e9cf675f93962cef576e4f8c38bf2f0f94f922d96a1b25"
+      "sha256": "3eb0a57fe44f1d7d131f56f81ade79044bd7dd88446528455d76e8f73bce676a"
     },
     {
       "path": "scripts/smoke_live.py",
@@ -329,6 +353,14 @@
     {
       "path": "tests/supervisor.rs",
       "sha256": "c01aeb4b31861b146346b92070fe30545447eddcaedab936c594c363d7925424"
+    },
+    {
+      "path": "tests/test_integration.py",
+      "sha256": "567d1a92bfbe5a47887347a05d445bb6a6c6d0cecb97ff6fbbe15c737093fe90"
+    },
+    {
+      "path": "tests/test_publication.py",
+      "sha256": "1791b5db13bc10f8ba42a8569baf2419f6ddd0c29b85aa79764fb63d5354db66"
     },
     {
       "path": "tests/wire_view.rs",

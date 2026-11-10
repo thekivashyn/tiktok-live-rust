@@ -14,11 +14,18 @@ cargo fmt --all -- --check
 cargo test --all-targets --locked
 cargo clippy --all-targets --locked -- -D warnings
 cargo build --release --examples --bins --locked
+python -m unittest discover -s tests -p "test_*.py" -v
+python scripts/check_repository.py
 ```
 
 On Windows with an isolated development toolchain, `run.ps1` can invoke the same
 Cargo commands. A standard Cargo installation does not need that wrapper.
 Tests must remain offline; real LIVE probes are opt-in.
+
+After intentional source/documentation changes, review the diff and refresh the
+source manifest with `python scripts/check_repository.py --update-manifest`.
+The checker validates hashes and local Markdown file targets; it does not claim
+to check external URLs or Markdown anchors. Python checks require Python 3.11+.
 
 ## What makes a useful change
 
