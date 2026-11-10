@@ -48,7 +48,15 @@ the existing core engine behavior and dependency lock remain unchanged.
 
 ## Validation
 
-The change adds one Rust example regression and seven Python integration/export
+The first integration CI run
+[42768481987](https://github.com/thekivashyn/tiktok-live-rust/actions/runs/42768481987)
+exposed a portability defect in the newly added manifest check: `Path` ordering
+on Windows differs from case-sensitive ordering on Linux/macOS. Their checks
+failed despite matching file contents. The exporter now sorts explicit relative
+POSIX strings. A regression reproduced the ordering failure on Windows before
+the fix and passes after it. The failed CI run remains part of the record.
+
+The change adds one Rust example regression and eight Python integration/export
 regressions. Python tests use real owned subprocesses with synthetic data,
 including stderr backpressure, a >64 KiB additive event, nonzero exits, malformed
 output and deadline cleanup. Export tests use a temporary synthetic repository.

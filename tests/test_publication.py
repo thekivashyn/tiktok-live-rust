@@ -55,6 +55,10 @@ class PublicationTests(unittest.TestCase):
         (self.root / "LICENSE").write_text("changed\n")
         self.assertTrue(self.invoke(checker.main, []))
 
+    def test_selected_paths_have_platform_independent_order(self):
+        paths = [p.relative_to(self.root).as_posix() for p in exporter.selected_files()]
+        self.assertEqual(paths, sorted(paths))
+
     def test_links_reject_missing_files_and_paths_outside_the_repository(self):
         (self.root / "README.md").write_text('[Missing](missing.md)\n[Outside](../outside.md)\n')
         (self.root.parent / "outside.md").write_text("exists outside\n")

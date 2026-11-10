@@ -36,7 +36,9 @@ def selected_files():
                 raise ValueError(f"symlink in export tree: {path.relative_to(ROOT)}")
             if path.is_file() and path.suffix in suffixes:
                 files.append(path)
-    return sorted(files)
+    # Path ordering itself is case-insensitive on Windows; manifest ordering must
+    # use the same case-sensitive POSIX spelling on every operating system.
+    return sorted(files, key=lambda path: path.relative_to(ROOT).as_posix())
 
 
 def main():

@@ -30,19 +30,23 @@ by Git and may be absent in another checkout; summaries here remain readable.
   events through the actual bounded decoder/processor, with dedupe and gift deltas.
   Added `examples/consume.py`: concurrent pipe drains, bounded line reads, a host
   deadline, explicit child cleanup and aggregate-only output.
-- Added automatic source-manifest/local-link checks and seven real-subprocess /
+- Added automatic source-manifest/local-link checks and eight real-subprocess /
   synthetic-export Python regressions. Expanded export filters for the new Python
   examples/tests and SVG asset. CI runs them and the offline Rust-to-Python demo;
   help/version invoke the built CLI directly to avoid redundant Cargo rebuilds.
 - Compatibility: examples, documentation and tooling only. Engine API/schema,
   core Rust source, registry dependencies and 0.8.0 version remain unchanged.
-- Local validation: 91 Rust tests and seven Python regressions passed; all-target
+- Local validation: 91 Rust tests and eight Python regressions passed; all-target
   Clippy with denied warnings, formatting and release CLI/examples build passed.
   The release offline demo emitted six valid events with known gift deltas 1/2;
   the Python consumer received all six and exited successfully. Manifest/local-link
   checks passed for 92 selected files. SVG XML was checked and its rendered preview
   visually reviewed. Core source/old Rust tests/Cargo.lock remain unchanged.
-- Fresh three-platform CI is required for the new integration/check commands;
+- First [CI run 42768481987](https://github.com/thekivashyn/tiktok-live-rust/actions/runs/42768481987)
+  exposed a new manifest-ordering portability defect on Linux/macOS. Preserve that
+  failed run. Sort explicit relative POSIX strings instead of platform Path objects;
+  the new ordering regression reproduced failure before the fix and passes after it.
+- Fresh three-platform CI is required for the corrected integration/check commands;
   observe that run before handoff. No new LIVE sample or performance benchmark;
   historical measurements stay historical.
 
