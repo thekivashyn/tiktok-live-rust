@@ -29,8 +29,19 @@ by Git and may be absent in another checkout; summaries here remain readable.
   and registry dependency versions are unchanged.
 - Validation: reuse the recorded 90-test Windows publication checks; no unrelated
   runtime/LIVE test rerun for repository metadata. Source/hash/link checks precede push.
-- In progress: push the initial commit and observe the three-platform GitHub CI;
-  record actual results and any required corrections before handoff.
+- Published initial `main` commit `ad947ce72f40757f4be1217941060889145d14ee`.
+  [CI run 42765689325](https://github.com/thekivashyn/tiktok-live-rust/actions/runs/42765689325)
+  passed on Windows, Linux and macOS: formatting, 90 offline tests per platform,
+  Clippy, release CLI/examples builds, and CLI help/version. No runtime fix was needed.
+- Configured the ten documented repository topics and enabled private vulnerability
+  reporting. Added README clone commands, author link and CI badge after success.
+- Final documentation/whitespace follow-up preserves the tested Rust source/tests,
+  dependency lock and workflow. Checked staged diff, source manifest hashes and
+  documentation links; did not repeat CI for that follow-up (`[skip ci]`).
+  Trimmed pre-existing empty EOF lines in four text files without behavior changes.
+- Limits/handoff: no new LIVE or performance test, no release tag or package publish.
+  The parent engine source and its standalone Git checkout are synchronized; the
+  checkout is `.public-export/tiktok-live-rust-public`, tracking `origin/main`.
 
 ### Public repository preparation — 2026-11-10
 

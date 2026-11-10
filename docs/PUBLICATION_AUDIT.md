@@ -4,6 +4,21 @@ Scope: the standalone `tiktok-live-rust` 0.8.0 engine, developed by Tri Nguyen.
 Review date: 2026-11-10, Asia/Saigon. This is a focused source/publication review
 and automated verification, not an independent penetration test or legal opinion.
 
+## Publication follow-up — 2026-11-10
+
+The prepared source is now published at
+[thekivashyn/tiktok-live-rust](https://github.com/thekivashyn/tiktok-live-rust).
+Initial commit `ad947ce72f40757f4be1217941060889145d14ee` passed the complete
+[three-platform CI run](https://github.com/thekivashyn/tiktok-live-rust/actions/runs/42765689325):
+formatting, 90 offline tests per platform, Clippy with denied warnings, release
+CLI/examples builds and CLI help/version checks on Windows, Linux and macOS.
+Topics and private vulnerability reporting are configured. Source text uses LF
+newlines so the 84-file manifest also matches the committed Git blobs.
+
+The sections below retain the original pre-publication audit snapshot. Its
+"not yet published" and "CI not run" statements describe that earlier stage.
+No new LIVE observation or performance benchmark was added during publication.
+
 ## Findings and disposition
 
 | Priority | Finding | Disposition |

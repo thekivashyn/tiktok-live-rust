@@ -24,7 +24,7 @@
     },
     {
       "path": ".gitignore",
-      "sha256": "30c00400be95e61110a4ab03e6a08f2a236248e77a43ab12931bc68aee3d7ce9"
+      "sha256": "9d138520ac73195425205f48474ad3f70a2760aee7b6553f2387cbb8526a6fd0"
     },
     {
       "path": "AGENTS.md",
@@ -60,7 +60,7 @@
     },
     {
       "path": "benchmarks/connector/metadata-oracle.mjs",
-      "sha256": "762c10edfadc878496391185c43aae8e5e67888835f6bec3fd4eb15b0d980e92"
+      "sha256": "33c30eb7646ae7e5d4d0616ec6fa9e8857a967cfc9dffa48f175437ff37513ea"
     },
     {
       "path": "benchmarks/connector/metadata-schema.json",
@@ -100,11 +100,11 @@
     },
     {
       "path": "Cargo.toml",
-      "sha256": "235c3c6a3597462ded810c2ae7ee383172734a9d3f354839e2988fd6990ac757"
+      "sha256": "b3595677636ea57e7f2b9063f043a8928aa61382137211441ba64d658e852206"
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "b5c8e224ce6f2f8173627a8779d040d2c053e4f5cb4c4d849465cae3d7ad6af3"
+      "sha256": "9aaa42a4d21670454fb38c2498b5533053b6b83c0452513885e3ff701f64363d"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -128,11 +128,11 @@
     },
     {
       "path": "docs/GITHUB_SETUP.md",
-      "sha256": "fef671e69357c6e3476e15225adb0722ad82e3622135c95756df9a231c50a5d8"
+      "sha256": "46493c6c2b1762a4f6a7ffdeec71deb031e56655e4de7135e955312ada73ca82"
     },
     {
       "path": "docs/PUBLICATION_AUDIT.md",
-      "sha256": "f34befc95b35d94467d4252f1a7daa0b1cdee2b5980976991ab4e2930933add3"
+      "sha256": "4f65930cebab8ca82620491b66516855fadafe32e1adb3527e04b0d75b6d2418"
     },
     {
       "path": "docs/USAGE.md",
@@ -196,11 +196,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "aab26305305add52454f70870977ac3b3d796d34b0af4918ff9a38beebb32c5c"
+      "sha256": "587c73e7adeee0d404521ad2a4d797aff376096b10b382d0dd1c0522ad0fc064"
     },
     {
       "path": "run.ps1",
-      "sha256": "85e46affb915cd9cfeb395434229f1f0ecccec276b20e7780ac56ce04d695d5b"
+      "sha256": "1651edea04ee6cc51755e51f357660a9f981c21242abd735bb4a77add7aa27fc"
     },
     {
       "path": "scripts/audit_dependencies.py",

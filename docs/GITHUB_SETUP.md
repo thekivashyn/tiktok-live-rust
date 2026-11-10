@@ -28,9 +28,9 @@ xem [hướng dẫn chính thức](https://docs.github.com/en/repositories/creat
 - **Topics:** `rust`, `tiktok`, `tiktok-live`, `websocket`, `protobuf`, `tokio`, `cli`, `real-time`, `event-driven`, `livestream`.
 - **Website:** để trống đến khi có demo hoặc trang cá nhân phù hợp.
 - **Issues:** bật. **Wiki:** tắt nếu chưa dùng. Discussions có thể bật khi có nhu cầu.
-- **Security:** bật private vulnerability reporting nếu tài khoản/repo hỗ trợ;
-  SECURITY.md hiện hướng dẫn cách liên hệ khi tính năng này chưa được bật.
-- **Actions:** chạy workflow `CI` trên `main`; chưa gắn badge xanh trước lần chạy thật.
+- **Security:** đã bật private vulnerability reporting cho repo này.
+- **Actions:** [lần CI đầu tiên](https://github.com/thekivashyn/tiktok-live-rust/actions/runs/42765689325)
+  đã pass trên Windows/Linux/macOS; README đã có badge CI.
 - **Profile:** pin repo lên trang cá nhân, thêm mô tả ngắn theo đúng điểm mạnh kỹ thuật.
 
 ## Đưa đúng source lên repo riêng

@@ -1,8 +1,10 @@
 # tiktok-live-rust
 
+[![CI](https://github.com/thekivashyn/tiktok-live-rust/actions/workflows/ci.yml/badge.svg)](https://github.com/thekivashyn/tiktok-live-rust/actions/workflows/ci.yml)
+
 **A Rust library and CLI for receiving TikTok LIVE events over a direct guest connection.**
 
-Built by **Tri Nguyen**. Version **0.8.0** · Rust 2024 · MIT
+Built by **[Tri Nguyen](https://github.com/thekivashyn)**. Version **0.8.0** · Rust 2024 · MIT
 
 Turn a public LIVE room into typed Rust events or a newline-delimited JSON stream
 for overlays, interactive games, dashboards and local tools. The engine handles
@@ -38,10 +40,12 @@ Install a current stable Rust toolchain with Cargo. On Windows, use the linker
 tools required by your Rust toolchain. Linux builds also need OpenSSL development
 headers and `pkg-config` because this project uses native TLS.
 
-Run these commands from the repository root, replacing `USERNAME` with a public
-channel that is currently LIVE:
+Clone the repository, then replace `USERNAME` with a public channel that is
+currently LIVE:
 
 ```sh
+git clone https://github.com/thekivashyn/tiktok-live-rust.git
+cd tiktok-live-rust
 cargo build --release --locked
 cargo run --release --locked -- --user USERNAME --seconds 60 --events --status
 ```
@@ -60,8 +64,9 @@ cargo run --locked -- --help
 cargo test --all-targets --locked
 ```
 
-Development has been validated on Windows. Linux/macOS compatibility remains
-unverified locally; the included CI workflow is intended to check all three.
+GitHub CI passes formatting, offline tests, Clippy, release builds and CLI checks
+on **Windows, Linux and macOS**. Real TikTok LIVE observations recorded so far
+were made on Windows; CI does not contact TikTok.
 
 ## Event output
 

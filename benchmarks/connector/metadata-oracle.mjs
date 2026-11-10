@@ -63,4 +63,3 @@ async function main(){
   if(!report.passed)process.exitCode=1;
 }
 if(process.argv[1]&&new URL(import.meta.url).pathname.replace(/^\//,'').toLowerCase()===process.argv[1].replaceAll('\\','/').toLowerCase())await main();
-
