@@ -32,7 +32,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "27e963537990b81bdf949f426365bee28eae1f0fb56a79b3c91d3532e3084f42"
+      "sha256": "2ee2590bbb0daeb5b7fe25dbee537661024fe3b8f1b67574a96a5766554bc34d"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -56,7 +56,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "1ef32f8b48480d77ea73ac9d0e7f7c12ded23b1b71e3eb9acf971526802b3214"
+      "sha256": "88fa271c4da324b5631518038b802fed72c97288e014508185c9a23ebd56e886"
     },
     {
       "path": "SECURITY.md",
@@ -156,7 +156,7 @@
     },
     {
       "path": "docs/SECOND_AUDIT.md",
-      "sha256": "3b1b8c77be4c9f8a578a42fd63d87d79dbffcce17af5cb15ef25dc553ab226a7"
+      "sha256": "435aa23e17abbc7f69e8eb08b24ed7026c773ae3653d4538d68e5714f5a34c9d"
     },
     {
       "path": "docs/USAGE.md",

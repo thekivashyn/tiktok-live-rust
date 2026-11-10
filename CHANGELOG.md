@@ -49,9 +49,16 @@ by Git and may be absent in another checkout; summaries here remain readable.
 - A real invalid-username probe confirmed CLI preflight stderr is plain text.
   The Python consumer now counts it without storing contents and preserves the
   process exit code; an additional subprocess regression covers that contract.
-- Fresh three-platform CI is required for the corrected integration/check commands;
-  observe that run before handoff. No new LIVE sample or performance benchmark;
-  historical measurements stay historical.
+- Fresh [CI run 42768795230](https://github.com/thekivashyn/tiktok-live-rust/actions/runs/42768795230)
+  passed on Windows, Linux and macOS at commit
+  `9d4cdeda099a406d9ec6777e9a140efe02d7bd36`: 91 Rust tests and nine Python tests
+  per platform, manifest/local links, formatting, denied-warning Clippy, release
+  builds, CLI help/version and the Rust demo consumed by Python.
+- Final evidence/disclosure text and manifest refresh use a documentation-only
+  follow-up (`[skip ci]`); tested engine/examples/tooling/workflow stay unchanged.
+  No unfinished implementation remains. No new LIVE sample or performance
+  benchmark; historical measurements stay historical and excluded raw artifacts
+  are now explicitly distinguished from rerunning the current benchmark harness.
 
 ### Initial GitHub publication — 2026-11-10
 

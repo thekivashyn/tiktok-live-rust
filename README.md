@@ -204,6 +204,8 @@ It does not contact TikTok.
 | Same 0.7.1 comparison | Peak receiver working set: 6.76 MiB vs 135.70 MiB | Process memory for that workload, including the respective consumer/adapter |
 
 The benchmark numbers belong to **0.7.1**, not a fresh 0.8.0 performance run.
+Original 0.7.1 binaries/raw reports are not included in this checkout; rerunning
+the harness measures the current source, rather than recreating those artifacts.
 The adapter supplies equivalent application policies; these are not claims about
 upstream built-ins. They do not predict TikTok latency or a universal speed/RAM
 ratio. [Methodology and reproduction](benchmarks/connector/README.md) ·

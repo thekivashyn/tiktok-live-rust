@@ -65,3 +65,9 @@ output and deadline cleanup. Export tests use a temporary synthetic repository.
 Commands/results and the actual three-platform CI result are recorded in the
 newest `Unreleased` [changelog entry](../CHANGELOG.md), rather than inferred from
 the first publication run.
+
+Final [CI run 42768795230](https://github.com/thekivashyn/tiktok-live-rust/actions/runs/42768795230)
+passed all checks on Windows, Linux and macOS at commit
+`9d4cdeda099a406d9ec6777e9a140efe02d7bd36`, including 91 Rust and nine Python
+tests per platform, release builds and the real offline Rust-to-Python integration.
+The documentation follow-up does not change the tested examples, scripts or engine.
