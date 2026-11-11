@@ -1,5 +1,5 @@
 {
-  "engine_version": "0.8.0",
+  "engine_version": "0.9.0",
   "content_normalization": "LF newlines for selected text files",
   "files": [
     {
@@ -32,7 +32,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "2ee2590bbb0daeb5b7fe25dbee537661024fe3b8f1b67574a96a5766554bc34d"
+      "sha256": "df2342e09fb101079f4d809aaa5d30e3605ba81b6ee06512f11997f41a212ea3"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -40,11 +40,11 @@
     },
     {
       "path": "Cargo.lock",
-      "sha256": "2b8c02e2695a350a1a8274795772e5e4e50321f9c4bbe942a3c844efec08c7a6"
+      "sha256": "48f6f30346348576bbdfda7edd2e4cc66b5e7fb4f00445ca9fea0405eaa93bd0"
     },
     {
       "path": "Cargo.toml",
-      "sha256": "b3595677636ea57e7f2b9063f043a8928aa61382137211441ba64d658e852206"
+      "sha256": "28c3f0a996cccf0fe1fa293b3a5a9063079641bacfd3d7c028724e09ff8fc89a"
     },
     {
       "path": "DEVELOPMENT.md",
@@ -56,7 +56,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "88fa271c4da324b5631518038b802fed72c97288e014508185c9a23ebd56e886"
+      "sha256": "abf07bdced9435a685817651a6f01c9e8cf03590077feb1fd9fbf878c2495500"
     },
     {
       "path": "SECURITY.md",
@@ -136,11 +136,11 @@
     },
     {
       "path": "docs/AGENT_GUIDE.md",
-      "sha256": "2bf5a343f44897a6480af55c9e8adda2dd4526f3808c68a6bcc1dcbea4ccc390"
+      "sha256": "b932364243d1be2540ecb2885e90af976db372356edbb284d2820c25acfc1052"
     },
     {
       "path": "docs/ARCHITECTURE.md",
-      "sha256": "25ccfe7a94a26cc2c7c5ff007cc692efa4398c9a9aad9406132d54065e6e8f3e"
+      "sha256": "3de1efaaaf484a1272f8aa63fab092b5fc29b7c77ba110b3169a54682fff4c60"
     },
     {
       "path": "docs/ENGINE_NOTES.md",
@@ -155,12 +155,16 @@
       "sha256": "4f65930cebab8ca82620491b66516855fadafe32e1adb3527e04b0d75b6d2418"
     },
     {
+      "path": "docs/RECONNECTS.md",
+      "sha256": "d1be4c8d7c04090a70968e98809e7ed83d3a92ce802c0dafb4940887cea0951d"
+    },
+    {
       "path": "docs/SECOND_AUDIT.md",
       "sha256": "435aa23e17abbc7f69e8eb08b24ed7026c773ae3653d4538d68e5714f5a34c9d"
     },
     {
       "path": "docs/USAGE.md",
-      "sha256": "9c42fd7baf0de8b4e9c697aae1446b6dd26e013ae9f1de0adc0ef40b3d7a4d13"
+      "sha256": "416abb12de8468ccc94d0677832393d7081d93dafa82ae0aa3a9f8e35af36c6f"
     },
     {
       "path": "docs/assets/hero.svg",
@@ -180,11 +184,11 @@
     },
     {
       "path": "examples/consume.py",
-      "sha256": "1ede2d197d2a820efffeeefa57ca13aa4b67888d8b7d55ffbb913bbe97cb9368"
+      "sha256": "c26d8f89235aa23dce749afe7e01087edb7e3a94c9e32be3fe0c3db1d21cd2a1"
     },
     {
       "path": "examples/consume.rs",
-      "sha256": "c4932184305a797213df0641c7a5a0c255a784e0195b8f991fa6b7b90faf6ec9"
+      "sha256": "05c77e1ac27e51d4771eb4765b01418cfc72412f6f80c45003bc25a52b92f465"
     },
     {
       "path": "examples/live_decode_probe.rs",
@@ -312,7 +316,7 @@
     },
     {
       "path": "src/engine.rs",
-      "sha256": "03efc6e7ad0b3effc9d8279f1195a09734efb6a376c3adfa145de728f139dd7e"
+      "sha256": "31f02e6cea650f17cd40f17abb6c83a2fd80fd2ba423902cbae6ca16340388ed"
     },
     {
       "path": "src/event_data.rs",
@@ -320,11 +324,15 @@
     },
     {
       "path": "src/lib.rs",
-      "sha256": "2a0a8788a6ce7e0adcc8452d8b43dbac3d7f03c97c8dd7d43ac9bf4d390fff15"
+      "sha256": "95c91aadb28daacf864f23834d67e93c12f80dd6b7e1be4ae4eb6ed92cad5603"
+    },
+    {
+      "path": "src/lifecycle.rs",
+      "sha256": "4f5e4431d0f2f0f27690d511a019e37ac35adda6b369b6dd836635df50b4a480"
     },
     {
       "path": "src/main.rs",
-      "sha256": "fe6cc70e49ba0450a3c67240a7b7bf6d9db45a17f1019cd19a05b25db862c5b2"
+      "sha256": "860beaec166ef52c91fb55e7cdc0848714000ab5dea206739a401c8e38a84d80"
     },
     {
       "path": "src/metadata.rs",
@@ -356,11 +364,11 @@
     },
     {
       "path": "tests/supervisor.rs",
-      "sha256": "c01aeb4b31861b146346b92070fe30545447eddcaedab936c594c363d7925424"
+      "sha256": "807aba2d3f7b130d0609f112437200905c4936d5bf5d780ae5fa8e6fd12a3a00"
     },
     {
       "path": "tests/test_integration.py",
-      "sha256": "1d8b0be3a7709e58167da9a7d4463012f579e4ac60d80cf4b0bf278f01b37bc6"
+      "sha256": "dbdb131fde3b1ff61b8459f6104bbef0218238bb713652514c2328eb97cca616"
     },
     {
       "path": "tests/test_publication.py",

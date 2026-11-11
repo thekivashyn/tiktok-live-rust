@@ -11,6 +11,7 @@ use std::{
 use tiktok_live_rust::{
     Event,
     engine::{self, Code, Config, ConnectionStatus, Failure, Report, StopReason, Target},
+    lifecycle::{self, LifecycleReceiver},
     transport::DirectSource,
 };
 use tokio::sync::{mpsc, oneshot, watch};
@@ -21,6 +22,7 @@ struct Options {
     config: Config,
     events: bool,
     status: bool,
+    lifecycle: bool,
     report: Option<String>,
 }
 fn parse(args: &[String]) -> Result<Options> {
@@ -28,6 +30,7 @@ fn parse(args: &[String]) -> Result<Options> {
     let mut config = Config::default();
     let mut events = false;
     let mut status = false;
+    let mut lifecycle = false;
     let mut explicit_reconnect_limit = false;
     let mut report = None;
     let mut i = 0;
@@ -35,6 +38,7 @@ fn parse(args: &[String]) -> Result<Options> {
         match args[i].as_str() {
             "--events" => events = true,
             "--status" => status = true,
+            "--lifecycle" => lifecycle = true,
             "--retry-until-deadline" => config.retry_until_deadline = true,
             "--room" | "--user" | "--seconds" | "--max-reconnects" | "--report" => {
                 let value = args.get(i + 1).context("missing option value")?;
@@ -76,6 +80,7 @@ fn parse(args: &[String]) -> Result<Options> {
         config,
         events,
         status,
+        lifecycle,
         report,
     })
 }
@@ -121,29 +126,76 @@ fn write_diagnostic(
     Ok(())
 }
 
-/// Blocking stderr writes stay off the socket runtime. There is only one pending snapshot
-/// and one final report. Slow diagnostics may skip intermediate states, never queue events.
+/// Compatibility helper for the snapshot-only diagnostic tests.
+#[cfg(test)]
 fn status_writer(
+    output: impl Write,
+    status: watch::Receiver<ConnectionStatus>,
+    final_report: oneshot::Receiver<Report>,
+) -> Result<()> {
+    diagnostics_writer(output, Some(status), None, final_report)
+}
+
+fn lifecycle_record(
+    output: &mut impl Write,
+    record: Result<lifecycle::LifecycleEvent, lifecycle::RecvError>,
+) -> Result<bool> {
+    match record {
+        Ok(event) => write_diagnostic(output, "lifecycle", &event)?,
+        Err(lifecycle::RecvError::Lagged(count)) => write_diagnostic(
+            output,
+            "lifecycle_lagged",
+            &serde_json::json!({"skipped_notifications": count}),
+        )?,
+        Err(lifecycle::RecvError::Closed) => return Ok(false),
+    }
+    Ok(true)
+}
+
+// Drain retained lifecycle records before the final report, including after a slow pipe.
+fn drain_lifecycle(output: &mut impl Write, receiver: &mut LifecycleReceiver) -> Result<()> {
+    loop {
+        match receiver.try_recv() {
+            Ok(event) => {
+                lifecycle_record(output, Ok(event))?;
+            }
+            Err(lifecycle::TryRecvError::Lagged(n)) => {
+                lifecycle_record(output, Err(lifecycle::RecvError::Lagged(n)))?;
+            }
+            Err(lifecycle::TryRecvError::Closed | lifecycle::TryRecvError::Empty) => return Ok(()),
+        }
+    }
+}
+
+fn diagnostics_writer(
     mut output: impl Write,
-    mut status: watch::Receiver<ConnectionStatus>,
+    mut status: Option<watch::Receiver<ConnectionStatus>>,
+    mut lifecycle: Option<LifecycleReceiver>,
     mut final_report: oneshot::Receiver<Report>,
 ) -> Result<()> {
     let runtime = tokio::runtime::Builder::new_current_thread().build()?;
     runtime.block_on(async {
-        let mut watching = true;
+        let mut watching = status.is_some();
+        let mut observing = lifecycle.is_some();
         loop {
             tokio::select! { biased;
                 report = &mut final_report => {
                     let report = report.context("report sender closed")?;
-                    let snapshot = status.borrow().clone();
-                    write_diagnostic(&mut output, "status", &snapshot)?;
+                    if let Some(receiver) = lifecycle.as_mut() { drain_lifecycle(&mut output, receiver)?; }
+                    if let Some(status) = &status {
+                        let snapshot = status.borrow().clone();
+                        write_diagnostic(&mut output, "status", &snapshot)?;
+                    }
                     write_diagnostic(&mut output, "report", &report)?;
                     return Ok(());
                 },
-                changed = status.changed(), if watching => {
+                record = async { lifecycle.as_mut().expect("enabled lifecycle receiver").recv().await }, if observing => {
+                    observing = lifecycle_record(&mut output, record)?;
+                },
+                changed = async { status.as_mut().expect("enabled status receiver").changed().await }, if watching => {
                     if changed.is_err() { watching = false; continue; }
                     // Release the watch read lock BEFORE serializing or writing a pipe.
-                    let snapshot = status.borrow_and_update().clone();
+                    let snapshot = status.as_mut().unwrap().borrow_and_update().clone();
                     write_diagnostic(&mut output, "status", &snapshot)?;
                 },
             }
@@ -202,7 +254,7 @@ async fn main() -> Result<()> {
     }
     if args.is_empty() || args == ["--help"] {
         println!(
-            "tiktok-live-rust --user USER | --room ROOM [--seconds 60] [--max-reconnects 8 | --retry-until-deadline] [--events] [--status] [--report PATH]\nDeveloped by Tri Nguyen\nDirect guest engine. No Euler. Duration 1..86400 seconds; reconnect budget 0..32 per outage.\n--retry-until-deadline: retry transient errors until duration/Ctrl+C; honors backoff and Retry-After.\nDefault: aggregate JSON. --events: NDJSON events on stdout, report on stderr.\n--status: coalesced NDJSON health snapshots and tagged final report on stderr. Ctrl+C stops."
+            "tiktok-live-rust --user USER | --room ROOM [--seconds 60] [--max-reconnects 8 | --retry-until-deadline] [--events] [--status] [--lifecycle] [--report PATH]\nDeveloped by Tri Nguyen\nDirect guest engine. No Euler. Duration 1..86400 seconds; reconnect budget 0..32 per outage.\n--retry-until-deadline: retry transient errors until duration/Ctrl+C; honors backoff and Retry-After.\nDefault: aggregate JSON. --events: NDJSON events on stdout, report on stderr.\n--status: coalesced NDJSON health snapshots on stderr.\n--lifecycle: bounded reconnect notifications on stderr; explicit lag records if slow.\nEither flag adds a tagged final report. Ctrl+C stops."
         );
         return Ok(());
     }
@@ -228,34 +280,46 @@ async fn main() -> Result<()> {
     } else {
         (None, None)
     };
-    let (status, diagnostics) = if options.status {
+    let (status, receiver) = if options.status {
         let (sender, receiver) = engine::status_channel();
+        (Some(sender), Some(receiver))
+    } else {
+        (None, None)
+    };
+    let (lifecycle, lifecycle_receiver) = if options.lifecycle {
+        let (sender, receiver) = lifecycle::channel();
+        (Some(sender), Some(receiver))
+    } else {
+        (None, None)
+    };
+    let (diagnostics, diagnostics_enabled) = if options.status || options.lifecycle {
         let (final_sender, final_receiver) = oneshot::channel();
         let (done, finished) = oneshot::channel();
+        let stop = cancel.clone();
         std::thread::Builder::new()
             .name("status-output".into())
             .spawn(move || {
                 let stderr = std::io::stderr();
-                let result = status_writer(stderr.lock(), receiver, final_receiver);
+                let result =
+                    diagnostics_writer(stderr.lock(), receiver, lifecycle_receiver, final_receiver);
+                if result.is_err() {
+                    stop.cancel();
+                }
                 let _ = done.send(result.is_ok());
             })?;
-        (Some(sender), Some((final_sender, finished)))
+        (Some((final_sender, finished)), true)
     } else {
-        (None, None)
+        (None, false)
     };
-    let mut report = if let Some(status) = status {
-        engine::run_with_status(
-            &source,
-            options.target,
-            options.config,
-            output,
-            cancel,
-            status,
-        )
-        .await
-    } else {
-        engine::run(&source, options.target, options.config, output, cancel).await
-    };
+    let mut report = engine::run_observed(
+        &source,
+        options.target,
+        options.config,
+        output,
+        cancel,
+        engine::Observers { status, lifecycle },
+    )
+    .await;
     signal_task.abort();
     if let Some(done) = writer_done {
         let error = match tokio::time::timeout(Duration::from_secs(3), done).await {
@@ -285,7 +349,7 @@ async fn main() -> Result<()> {
             json = serialize_and_save_report(options.report.as_deref(), &mut report)?;
         }
     }
-    if options.events && !options.status {
+    if options.events && !diagnostics_enabled {
         eprintln!("{json}");
     } else if !options.events {
         println!("{json}");
@@ -300,6 +364,83 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    struct FailingSource;
+    impl engine::Source for FailingSource {
+        type Io = tokio::io::DuplexStream;
+        async fn connect(
+            &self,
+            _: &Target,
+        ) -> std::result::Result<engine::Connection<Self::Io>, Failure> {
+            Err(Failure::new(Code::Network, "synthetic_connect", true))
+        }
+    }
+
+    fn lagged_lifecycle() -> (LifecycleReceiver, Report) {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap();
+        runtime.block_on(async {
+            tokio::time::pause();
+            let (sender, receiver) = lifecycle::channel();
+            let report = engine::run_observed(
+                &FailingSource,
+                Target::Room("42".into()),
+                Config {
+                    duration: Duration::from_secs(86_400),
+                    max_reconnects: 32,
+                    ..Config::default()
+                },
+                None,
+                CancellationToken::new(),
+                engine::Observers {
+                    status: None,
+                    lifecycle: Some(sender),
+                },
+            )
+            .await;
+            (receiver, report)
+        })
+    }
+
+    #[test]
+    fn lifecycle_drain_precedes_ready_final_report_and_reports_lag() {
+        let (receiver, report) = lagged_lifecycle();
+        let (done, final_report) = oneshot::channel();
+        done.send(report).unwrap(); // Both branches are already ready: never skip lifecycle.
+        let mut bytes = Vec::new();
+        diagnostics_writer(&mut bytes, None, Some(receiver), final_report).unwrap();
+        let records = String::from_utf8(bytes)
+            .unwrap()
+            .lines()
+            .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(records.len(), lifecycle::CAPACITY + 2);
+        assert_eq!(records[0]["type"], "lifecycle_lagged");
+        assert_eq!(records[0]["data"]["skipped_notifications"], 2);
+        assert_eq!(records[1]["data"]["sequence"], 3);
+        assert_eq!(records[64]["data"]["kind"], "stopped");
+        assert_eq!(records[64]["data"]["error"]["code"], "retry_exhausted");
+        assert_eq!(records.last().unwrap()["type"], "report");
+        assert!(!records.iter().any(|record| record["type"] == "status"));
+    }
+
+    #[test]
+    fn lifecycle_diagnostic_write_failure_is_propagated() {
+        struct ClosedPipe;
+        impl Write for ClosedPipe {
+            fn write(&mut self, _: &[u8]) -> std::io::Result<usize> {
+                Err(std::io::ErrorKind::BrokenPipe.into())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+        let (receiver, report) = lagged_lifecycle();
+        let (done, final_report) = oneshot::channel();
+        done.send(report).unwrap();
+        assert!(diagnostics_writer(ClosedPipe, None, Some(receiver), final_report).is_err());
+    }
     #[test]
     fn invalid_cli_is_rejected_before_network() {
         for input in [
@@ -327,6 +468,7 @@ mod tests {
                 "--user",
                 "alice",
                 "--status",
+                "--lifecycle",
                 "--events",
                 "--retry-until-deadline",
             ]
@@ -334,8 +476,16 @@ mod tests {
         )
         .unwrap();
         assert!(options.status && options.events && options.config.retry_until_deadline);
+        assert!(options.lifecycle);
         let default = parse(&["--user", "alice"].map(String::from)).unwrap();
-        assert!(!default.status && !default.events && !default.config.retry_until_deadline);
+        assert!(
+            !default.status
+                && !default.events
+                && !default.lifecycle
+                && !default.config.retry_until_deadline
+        );
+        let lifecycle_only = parse(&["--room", "42", "--lifecycle"].map(String::from)).unwrap();
+        assert!(lifecycle_only.lifecycle && !lifecycle_only.status && !lifecycle_only.events);
     }
     #[test]
     fn diagnostics_end_with_stopped_snapshot_and_tagged_report() {

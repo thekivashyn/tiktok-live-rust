@@ -12,6 +12,32 @@ spec.loader.exec_module(consumer)
 
 
 class ConsumerTests(unittest.IsolatedAsyncioTestCase):
+    async def test_lifecycle_gap_and_lag_without_later_events_stay_incomplete(self):
+        script = """
+import json, sys
+for record in [
+ {'type':'lifecycle','data':{'kind':'interrupted','possible_gaps':1}},
+ {'type':'lifecycle_lagged','data':{'skipped_notifications':7}},
+ {'type':'lifecycle','data':{'kind':'connected','connection_epoch':2,'possible_gaps':1}},
+ {'type':'lifecycle','data':{'kind':'ready','possible_gaps':1}},
+ {'type':'lifecycle','data':{'kind':'stopped','possible_gaps':1}},
+ {'type':'report','data':{'stop_reason':'cancelled','possible_gaps':1,'error':None}},
+]: print(json.dumps(record), file=sys.stderr)
+"""
+        result = await consumer.consume([sys.executable, "-c", script], timeout=5)
+        self.assertEqual(result["events"], {})
+        self.assertEqual(result["lifecycle_notifications"], 4)
+        self.assertEqual(result["skipped_lifecycle_notifications"], 7)
+        self.assertEqual(result["last_lifecycle"], "stopped")
+        self.assertTrue(result["view_may_be_incomplete"])
+        self.assertEqual(result["stop_reason"], "cancelled")
+
+    async def test_epoch_boundary_flags_gap_even_without_diagnostics(self):
+        script = "import json; print(json.dumps({'kind':'chat','room_id':'42','connection_epoch':2}))"
+        result = await consumer.consume([sys.executable, "-c", script], timeout=5)
+        self.assertTrue(result["view_may_be_incomplete"])
+        self.assertEqual(result["events"], {"chat": 1})
+
     async def test_both_pipes_drain_and_large_additive_events_are_accepted(self):
         script = """
 import json,sys

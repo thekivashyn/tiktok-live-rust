@@ -32,7 +32,7 @@ an error code, not raw chat or profile logs. Extend its event handler for your a
 A host launching the CLI itself should pass an argument array:
 
 ```text
-[binary, "--user", username, "--seconds", "60", "--events", "--status"]
+[binary, "--user", username, "--seconds", "60", "--events", "--status", "--lifecycle"]
 ```
 
 Do not concatenate usernames into a shell command. Drain both pipes from the
@@ -45,6 +45,8 @@ acceptance is not guaranteed.
 | --- | --- |
 | stdout JSON line | One normalized event; handle supported `kind` values and tolerate additive fields |
 | stderr `type: status` | Latest health snapshot; intermediate snapshots may coalesce |
+| stderr `type: lifecycle` | Typed connection/retry/terminal observation; keep the same event subscription through retries |
+| stderr `type: lifecycle_lagged` | Notification history overflowed; mark the view incomplete and resync from retained records/status/report |
 | stderr `type: report` | Final aggregate report; inspect `error`, output counters and exit code |
 | Nonzero exit | Surface failure; preserve the structured code rather than assuming success from earlier events |
 | Plain stderr before engine startup | CLI validation/setup may fail before JSON reporting; count diagnostics and preserve exit status without inventing an engine error code |
@@ -70,8 +72,10 @@ Retry-After remain active.
 The Python example allows an additional 15 seconds for engine/output shutdown,
 then terminates and, if necessary, kills only its owned child. It waits for
 cleanup. A host should use its own deadline even when the engine has one:
-without `--status`, final aggregate output can use synchronous pipe writes.
+without either observation flag, final aggregate output can use synchronous pipe writes.
 Drain the pipes instead of assuming elapsed duration alone guarantees exit.
 
 See [USAGE.md](USAGE.md) for the full event/CLI contract and
 [consume.rs](../examples/consume.rs) for Rust health observation and cancellation.
+The [reconnect guide](RECONNECTS.md) explains lifecycle ordering, lag and why
+reconnect/readiness must not be treated as upstream backfill.

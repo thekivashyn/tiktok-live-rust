@@ -1,6 +1,7 @@
 mod decoder;
 pub mod engine;
 pub mod event_data;
+pub mod lifecycle;
 pub mod metadata;
 pub mod protocol;
 pub mod transport;

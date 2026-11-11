@@ -10,6 +10,7 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
+use tiktok_live_rust::lifecycle::{self, LifecycleEvent, LifecycleKind as L};
 use tiktok_live_rust::{Event, engine::*, protocol::*};
 use tokio::{
     io::{AsyncRead, AsyncWrite, DuplexStream, ReadBuf},
@@ -23,6 +24,353 @@ use tokio_tungstenite::{
     },
 };
 use tokio_util::sync::CancellationToken;
+
+async fn observe_lifecycle(mut receiver: lifecycle::LifecycleReceiver) -> Vec<LifecycleEvent> {
+    let mut events = Vec::new();
+    while let Ok(event) = receiver.recv().await {
+        events.push(event);
+    }
+    events
+}
+
+#[tokio::test(start_paused = true)]
+async fn lifecycle_reconnect_is_visible_without_another_application_event() {
+    let script = Script::new(vec![
+        Step::Socket("42", vec![batch(vec![gift(1, 1)]), Message::Close(None)]),
+        Step::Socket("42", vec![]),
+    ]);
+    let (sender, mut receiver) = mpsc::channel(8);
+    let (lifecycle, mut notifications) = lifecycle::channel();
+    let (status, final_status) = status_channel();
+    let cancel = CancellationToken::new();
+    let stop = cancel.clone();
+    let observe = async {
+        let mut seen = Vec::new();
+        while let Ok(event) = notifications.recv().await {
+            if event.kind == L::Connected && event.connection_epoch == 2 {
+                stop.cancel();
+            }
+            seen.push(event);
+        }
+        seen
+    };
+    let (report, seen) = tokio::join!(
+        run_observed(
+            &script,
+            Target::Room("42".into()),
+            config(),
+            Some(sender),
+            cancel,
+            Observers {
+                status: Some(status),
+                lifecycle: Some(lifecycle)
+            }
+        ),
+        observe
+    );
+    assert_eq!(
+        seen.iter().map(|n| n.kind).collect::<Vec<_>>(),
+        vec![
+            L::Connecting,
+            L::Connected,
+            L::Ready,
+            L::Interrupted,
+            L::RetryScheduled,
+            L::Connecting,
+            L::Connected,
+            L::Stopped
+        ]
+    );
+    assert_eq!(
+        seen.iter().map(|n| n.sequence).collect::<Vec<_>>(),
+        (1..=8).collect::<Vec<_>>()
+    );
+    assert_eq!(seen[3].possible_gaps, 1);
+    assert!(seen[3].error.is_some());
+    assert!(seen[4].retry_delay_ms.unwrap() >= 1000);
+    assert_eq!(seen[6].previous_epoch, Some(1));
+    assert_eq!(seen[6].events_enqueued, 1);
+    assert_eq!(seen[7].stop_reason, Some(StopReason::Cancelled));
+    assert_eq!(report.stop_reason, StopReason::Cancelled);
+    assert!(report.error.is_none());
+    assert_eq!(
+        (
+            report.connections,
+            report.ready_connections,
+            report.possible_gaps
+        ),
+        (2, 1, 1)
+    );
+    assert_eq!(final_status.borrow().state, ConnectionState::Stopped);
+    assert_eq!(receiver.recv().await.unwrap().connection_epoch, 1);
+    assert!(receiver.recv().await.is_none());
+    assert_eq!(script.active.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test(start_paused = true)]
+async fn lifecycle_room_changes_preserve_original_event_channel_and_watermarks() {
+    let script = Script::new(vec![
+        Step::Socket("42", vec![batch(vec![gift(1, 2)]), Message::Close(None)]),
+        Step::Socket("43", vec![batch(vec![gift(1, 2), end()])]),
+    ]);
+    let (sender, mut receiver) = mpsc::channel(8);
+    let (lifecycle, notifications) = lifecycle::channel();
+    let (report, seen) = tokio::join!(
+        run_observed(
+            &script,
+            Target::User("test".into()),
+            config(),
+            Some(sender),
+            CancellationToken::new(),
+            Observers {
+                status: None,
+                lifecycle: Some(lifecycle)
+            }
+        ),
+        observe_lifecycle(notifications)
+    );
+    assert!(report.error.is_none());
+    let connected = seen
+        .iter()
+        .filter(|n| n.kind == L::Connected)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        (&*connected[0].room_id, connected[0].previous_epoch),
+        ("42", None)
+    );
+    assert_eq!(
+        (
+            &*connected[1].room_id,
+            connected[1].previous_epoch,
+            connected[1].room_changes
+        ),
+        ("43", Some(1), 1)
+    );
+    let mut events = Vec::new();
+    while let Some(event) = receiver.recv().await {
+        events.push(event);
+    }
+    assert_eq!(
+        events
+            .iter()
+            .map(|e| (e.sequence, e.connection_epoch))
+            .collect::<Vec<_>>(),
+        vec![(1, 1), (2, 2), (3, 2)]
+    );
+    let stopped = seen.last().unwrap();
+    assert_eq!(
+        (
+            stopped.kind,
+            stopped.events_processed,
+            stopped.events_enqueued
+        ),
+        (L::Stopped, 3, 3)
+    );
+    assert_eq!(stopped.stop_reason, Some(StopReason::StreamEnded));
+    assert!(!report.gap_recovery);
+}
+
+#[tokio::test(start_paused = true)]
+async fn lifecycle_terminal_failures_and_retry_exhaustion_are_explicit() {
+    for (steps, expected, retries) in [
+        (
+            vec![Step::Fail(Failure::new(Code::Offline, "test", false))],
+            Code::Offline,
+            0,
+        ),
+        (
+            (0..3)
+                .map(|_| Step::Fail(Failure::new(Code::Network, "test", true)))
+                .collect(),
+            Code::RetryExhausted,
+            2,
+        ),
+    ] {
+        let script = Script::new(steps);
+        let (lifecycle, notifications) = lifecycle::channel();
+        let (report, seen) = tokio::join!(
+            run_observed(
+                &script,
+                Target::Room("42".into()),
+                Config {
+                    max_reconnects: 2,
+                    ..config()
+                },
+                None,
+                CancellationToken::new(),
+                Observers {
+                    status: None,
+                    lifecycle: Some(lifecycle)
+                }
+            ),
+            observe_lifecycle(notifications)
+        );
+        let stopped = seen.last().unwrap();
+        assert_eq!(stopped.kind, L::Stopped);
+        assert_eq!(stopped.error.as_ref().unwrap().code, expected);
+        assert_eq!(stopped.stop_reason, Some(StopReason::Failed));
+        assert_eq!(
+            seen.iter().filter(|n| n.kind == L::RetryScheduled).count(),
+            retries
+        );
+        assert_eq!(report.possible_gaps, 0); // Handshake failures are not interrupted sessions.
+        assert!(
+            !seen
+                .iter()
+                .any(|n| n.kind == L::Connected || n.kind == L::Interrupted)
+        );
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn lifecycle_retry_wait_can_be_cancelled_without_another_attempt() {
+    let script = Script::new(vec![Step::Fail(http_failure(429, Some("600"), "test"))]);
+    let (lifecycle, mut notifications) = lifecycle::channel();
+    let cancel = CancellationToken::new();
+    let stop = cancel.clone();
+    let observer = async {
+        let mut seen = Vec::new();
+        while let Ok(event) = notifications.recv().await {
+            if event.kind == L::RetryScheduled {
+                assert_eq!(event.retry_delay_ms, Some(600_000));
+                stop.cancel();
+            }
+            seen.push(event);
+        }
+        seen
+    };
+    let (report, seen) = tokio::join!(
+        run_observed(
+            &script,
+            Target::Room("42".into()),
+            config(),
+            None,
+            cancel,
+            Observers {
+                status: None,
+                lifecycle: Some(lifecycle)
+            }
+        ),
+        observer
+    );
+    assert_eq!(report.stop_reason, StopReason::Cancelled);
+    assert_eq!(
+        seen.last().unwrap().stop_reason,
+        Some(StopReason::Cancelled)
+    );
+    assert_eq!(script.calls.load(Ordering::Relaxed), 1);
+}
+
+#[tokio::test(start_paused = true)]
+async fn lifecycle_slow_observer_reports_lag_and_retains_terminal_notification() {
+    let script = Script::new(
+        (0..33)
+            .map(|_| Step::Fail(Failure::new(Code::Network, "test", true)))
+            .collect(),
+    );
+    let (lifecycle, mut notifications) = lifecycle::channel();
+    let report = run_observed(
+        &script,
+        Target::Room("42".into()),
+        Config {
+            duration: Duration::from_secs(86_400),
+            max_reconnects: 32,
+            ..config()
+        },
+        None,
+        CancellationToken::new(),
+        Observers {
+            status: None,
+            lifecycle: Some(lifecycle),
+        },
+    )
+    .await;
+    assert_eq!(report.error.unwrap().code, Code::RetryExhausted);
+    assert_eq!(
+        notifications.recv().await.unwrap_err(),
+        lifecycle::RecvError::Lagged(2)
+    );
+    let mut retained = Vec::new();
+    while let Ok(event) = notifications.recv().await {
+        retained.push(event);
+    }
+    assert_eq!(retained.len(), lifecycle::CAPACITY);
+    assert_eq!(retained.first().unwrap().sequence, 3);
+    assert_eq!(retained.last().unwrap().sequence, 66);
+    assert_eq!(retained.last().unwrap().kind, L::Stopped);
+    assert_eq!(
+        notifications.try_recv().unwrap_err(),
+        lifecycle::TryRecvError::Closed
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn lifecycle_observer_drop_does_not_stop_ingestion() {
+    let script = Script::new(vec![Step::Socket("42", vec![batch(vec![end()])])]);
+    let (lifecycle, notifications) = lifecycle::channel();
+    drop(notifications);
+    let report = run_observed(
+        &script,
+        Target::Room("42".into()),
+        config(),
+        None,
+        CancellationToken::new(),
+        Observers {
+            status: None,
+            lifecycle: Some(lifecycle),
+        },
+    )
+    .await;
+    assert!(report.error.is_none());
+    assert_eq!(report.stop_reason, StopReason::StreamEnded);
+}
+
+#[tokio::test(start_paused = true)]
+async fn lifecycle_consumer_backpressure_stops_explicitly_without_reconnecting() {
+    for closed in [false, true] {
+        let script = Script::new(vec![Step::Socket(
+            "42",
+            vec![batch(vec![gift(1, 1), gift(2, 2)])],
+        )]);
+        let (sender, receiver) = mpsc::channel(1);
+        let held = if closed {
+            drop(receiver);
+            None
+        } else {
+            Some(receiver)
+        };
+        let (lifecycle, notifications) = lifecycle::channel();
+        let (report, seen) = tokio::join!(
+            run_observed(
+                &script,
+                Target::Room("42".into()),
+                config(),
+                Some(sender),
+                CancellationToken::new(),
+                Observers {
+                    status: None,
+                    lifecycle: Some(lifecycle)
+                }
+            ),
+            observe_lifecycle(notifications)
+        );
+        assert_eq!(
+            report.error.unwrap().code,
+            if closed {
+                Code::ConsumerClosed
+            } else {
+                Code::ConsumerSlow
+            }
+        );
+        assert!(report.events_unqueued > 0);
+        assert_eq!(seen.last().unwrap().kind, L::Stopped);
+        assert!(seen.iter().any(|n| n.kind == L::Interrupted));
+        assert!(!seen.iter().any(|n| n.kind == L::RetryScheduled));
+        assert_eq!(script.calls.load(Ordering::Relaxed), 1);
+        assert_eq!(script.active.load(Ordering::SeqCst), 0);
+        drop(held);
+    }
+}
 
 enum Step {
     Fail(Failure),

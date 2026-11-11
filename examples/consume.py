@@ -16,15 +16,23 @@ async def consume(command, timeout=75):
         limit=512 * 1024)
     counts = Counter()
     health = {"last_state": None, "stop_reason": None, "error_code": None,
-              "unstructured_diagnostics": 0}
+              "unstructured_diagnostics": 0, "lifecycle_notifications": 0,
+              "skipped_lifecycle_notifications": 0, "last_lifecycle": None,
+              "view_may_be_incomplete": False}
+    last_boundary = None
 
     async def events():
+        nonlocal last_boundary
         async for line in process.stdout:
             event = json.loads(line)
             kind = event.get("kind")
             if kind not in KINDS:
                 raise ValueError("unexpected event kind")
             counts[kind] += 1
+            boundary = (event.get("room_id"), event.get("connection_epoch", 0))
+            if (last_boundary is not None and boundary != last_boundary) or boundary[1] > 1:
+                health["view_may_be_incomplete"] = True
+            last_boundary = boundary
             # Your application handles the event here. Keep work quick; do not
             # print/store raw chats or profiles unless explicitly needed.
             # Gift quantity_delta=None means unknown, never a known total.
@@ -47,6 +55,21 @@ async def consume(command, timeout=75):
             elif record.get("type") == "report":
                 health["stop_reason"] = data.get("stop_reason")
                 health["error_code"] = (data.get("error") or {}).get("code")
+                if data.get("possible_gaps", 0) > 0:
+                    health["view_may_be_incomplete"] = True
+            elif record.get("type") == "lifecycle":
+                health["lifecycle_notifications"] += 1
+                health["last_lifecycle"] = data.get("kind")
+                if data.get("kind") == "interrupted" or data.get("possible_gaps", 0) > 0:
+                    health["view_may_be_incomplete"] = True
+                # Keep reading the SAME child pipes during retries. Connected is
+                # not Ready; neither implies upstream backfill or repairs totals.
+                # A stopped record ends automatic retries; inspect the final report.
+            elif record.get("type") == "lifecycle_lagged":
+                health["skipped_lifecycle_notifications"] += data.get("skipped_notifications", 0)
+                health["view_may_be_incomplete"] = True
+                # Continue with retained records. This counts missed notifications,
+                # not missed upstream events; status/report provide current state.
 
     try:
         async with asyncio.timeout(timeout):
@@ -84,7 +107,7 @@ def main():
         parser.error("executable not found; build the CLI or offline_demo first")
     command = [str(binary.resolve())]
     if not args.demo:
-        command += ["--user", args.user, "--seconds", str(args.seconds), "--events", "--status"]
+        command += ["--user", args.user, "--seconds", str(args.seconds), "--events", "--status", "--lifecycle"]
     try:
         summary = asyncio.run(consume(command, timeout=10 if args.demo else args.seconds + 15))
     except KeyboardInterrupt:

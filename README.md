@@ -12,7 +12,7 @@ A standalone Rust library and CLI that receives public LIVE events, supervises t
 connection and makes delivery uncertainty visible. Embed the library in Rust, or
 consume the CLI from any language that can launch a process.
 
-Built by **[Tri Nguyen](https://github.com/thekivashyn)** · engine **0.8.0** · MIT
+Built by **[Tri Nguyen](https://github.com/thekivashyn)** · engine **0.9.0** · MIT
 
 [Try the offline demo](#try-it-without-a-live-room) · [Connect LIVE](#connect-a-live-room) · [Integrate](#build-on-it) · [Architecture](docs/ARCHITECTURE.md) · [Agent guide](docs/AGENT_GUIDE.md)
 
@@ -86,11 +86,11 @@ Replace `USERNAME` with a public channel that is currently LIVE:
 
 ```sh
 cargo build --release --locked
-cargo run --release --locked -- --user USERNAME --seconds 60 --events --status
+cargo run --release --locked -- --user USERNAME --seconds 60 --events --status --lifecycle
 ```
 
 - **stdout:** one event JSON object per line.
-- **stderr:** tagged health snapshots and the final aggregate report.
+- **stderr:** tagged lifecycle notifications, health snapshots and the final aggregate report.
 - **Ctrl+C:** cancel the session. The default duration is 60 seconds.
 
 For an aggregate report only, omit `--events --status`. To target a known room,
@@ -104,7 +104,7 @@ terminal failures stop. See the [complete CLI contract](docs/USAGE.md).
 
 | You are building… | Start here |
 | --- | --- |
-| A Rust desktop/backend application | [Rust consumer](examples/consume.rs): bounded events, health snapshots and cancellation |
+| A Rust desktop/backend application | [Rust consumer](examples/consume.rs): bounded events, reconnect lifecycle, health and cancellation |
 | A Python integration | [Python consumer](examples/consume.py): concurrent pipe reads, host deadline and child cleanup |
 | An agent that observes LIVE activity | [Agent integration guide](docs/AGENT_GUIDE.md): machine output, stop conditions and trust boundaries |
 | An overlay, game or dashboard | Handle normalized events, then apply your own rendering, rules and storage |
@@ -126,14 +126,14 @@ chat and profile data are not printed by default.
 
 ### Rust: embed the engine
 
-A reproducible Git dependency for the published 0.8.0 engine:
+A reproducible Git dependency for the v0.9.0 engine:
 
 ```toml
 [dependencies]
-tiktok-live-rust = { git = "https://github.com/thekivashyn/tiktok-live-rust", rev = "cda17cb99720758906d79ee2abb5a1878ba7386d" }
+tiktok-live-rust = { git = "https://github.com/thekivashyn/tiktok-live-rust", tag = "v0.9.0" }
 ```
 
-Use `engine::run` or `engine::run_with_status` with `DirectSource`, `Config`,
+Use `engine::run`, `engine::run_with_status` or `engine::run_observed` with `DirectSource`, `Config`,
 `Target`, a `CancellationToken` and a bounded event channel. The complete
 [consume.rs example](examples/consume.rs) runs reception, consumption and health
 observation concurrently:
@@ -143,8 +143,23 @@ cargo run --locked --example consume -- USERNAME
 ```
 
 The crate import is `tiktok_live_rust`. The package is not on crates.io
-(`publish = false`); pin a commit and update it intentionally. There is no C ABI,
+(`publish = false`); pin a release tag or commit and update it intentionally. There is no C ABI,
 language-specific SDK or MCP server bundled with this engine.
+
+### Reconnects your consumer can handle
+
+**v0.9.0:** keep the same event subscription through transient reconnects, and
+observe `connecting → connected → ready`, interruptions, retry waits and terminal
+stops independently of application events. Rust uses `run_observed` with
+`lifecycle::channel()`; CLI users add `--lifecycle` for tagged stderr records.
+
+The lifecycle ring retains 64 notifications and explicitly reports a slow reader's
+lag. A connected socket is not yet ready, and reconnecting does not recover missed
+upstream events. The updated Rust/Python examples flag incomplete views rather
+than silently resetting totals. [Delivery, ordering and recovery guide](docs/RECONNECTS.md).
+
+Thanks to [@Rhytera on X](https://x.com/Rhytera) for the feedback behind this
+improvement ([issue #1](https://github.com/thekivashyn/tiktok-live-rust/issues/1)).
 
 ## Events that your app can understand
 

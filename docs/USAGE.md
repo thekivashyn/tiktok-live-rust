@@ -1,6 +1,6 @@
 # CLI and event reference
 
-Version 0.8.0. Developed by Tri Nguyen.
+Version 0.9.0. Developed by Tri Nguyen.
 
 ## Build
 
@@ -28,6 +28,7 @@ that machine-specific directory and must stay ignored.
 | `--retry-until-deadline` | Retry transient failures until duration/cancellation; mutually exclusive with explicit `--max-reconnects` |
 | `--events` | Emit normalized NDJSON events on stdout |
 | `--status` | Emit tagged NDJSON health/report records on stderr |
+| `--lifecycle` | Emit bounded reconnect lifecycle records and explicit lag notifications on stderr; includes tagged final report |
 | `--report PATH` | Also save the aggregate report; the parent directory must exist |
 | `--help` | Display usage without connecting |
 | `--version` | Display package version and developer without connecting |
@@ -37,7 +38,7 @@ for a channel to go LIVE. Retry mode still honors backoff, terminal failures and
 Retry-After. A missing/malformed Retry-After on HTTP 429 uses a 60-second cooldown.
 
 The configured duration includes setup and retry waits. Socket close can add two
-seconds, event-output drain three, and enabled status-output drain a further three.
+seconds, event-output drain three, and enabled diagnostics-output drain a further three.
 
 ## Output streams and exit status
 
@@ -47,12 +48,20 @@ seconds, event-output drain three, and enabled status-output drain a further thr
 | `--events` | One event JSON object per line | Final aggregate JSON report |
 | `--status` | Aggregate JSON report | Tagged NDJSON status/final-report records |
 | `--events --status` | One event JSON object per line | Tagged NDJSON status/final-report records |
+| `--lifecycle` | Aggregate JSON report | Tagged NDJSON lifecycle/lag/final-report records |
+| `--events --lifecycle` | One event JSON object per line | Tagged NDJSON lifecycle/lag/final-report records |
 
 Status records have `{"type":"status","data":{...}}`; final report records use
 `"type":"report"`. They are snapshots, not a lossless transition log. A host
 application must drain stdout and stderr concurrently, including when it ignores
 health information. Avoid logging raw event streams unless your application
 explicitly needs to retain them.
+
+The two observation flags can be combined. `--lifecycle` is independent of the
+coalescing status channel and reports reconnects before another application event
+arrives. It retains 64 records and explicitly reports overflow. See
+[reconnect delivery and recovery](RECONNECTS.md) for the full contract, including
+separate-pipe ordering and the limits of upstream gap recovery.
 
 Terminal failures return a nonzero exit status. A duration with no supported
 events also fails (`NoEvents`); it means no usable-event proof, not necessarily
@@ -143,6 +152,7 @@ complete current counter structure.
 | Messages per batch | 4,096 |
 | Event wire payload | 256 KiB |
 | CLI event queue | 256 events |
+| Lifecycle observation ring | 64 notifications; explicit lag for a slow observer |
 | Dedupe window | 8,192 message IDs |
 | Gift-combo window | 4,096 keys |
 | Optional metadata wire / aggregate text | 32 KiB / 16 KiB |

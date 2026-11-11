@@ -1,3 +1,4 @@
+use crate::lifecycle::{LifecycleKind, LifecycleSender};
 use crate::{Event, Processor, protocol};
 use futures_util::{FutureExt, SinkExt, StreamExt};
 use serde::Serialize;
@@ -466,7 +467,7 @@ pub async fn run<S: Source>(
     output: Option<mpsc::Sender<Event>>,
     cancel: CancellationToken,
 ) -> Report {
-    run_inner(source, target, config, output, cancel, None).await
+    run_observed(source, target, config, output, cancel, Observers::default()).await
 }
 
 /// Same event contract as run(), with optional UI/host observation through a bounded
@@ -479,17 +480,37 @@ pub async fn run_with_status<S: Source>(
     cancel: CancellationToken,
     status: watch::Sender<ConnectionStatus>,
 ) -> Report {
-    run_inner(source, target, config, output, cancel, Some(status)).await
+    run_observed(
+        source,
+        target,
+        config,
+        output,
+        cancel,
+        Observers {
+            status: Some(status),
+            lifecycle: None,
+        },
+    )
+    .await
 }
 
-async fn run_inner<S: Source>(
+/// Optional observations. Use a fresh lifecycle channel for each run.
+#[derive(Default)]
+pub struct Observers {
+    pub status: Option<watch::Sender<ConnectionStatus>>,
+    pub lifecycle: Option<LifecycleSender>,
+}
+
+/// Same event/retry contract as `run`, with bounded lifecycle and/or health observation.
+pub async fn run_observed<S: Source>(
     source: &S,
     target: Target,
     config: Config,
     output: Option<mpsc::Sender<Event>>,
     cancel: CancellationToken,
-    status: Option<watch::Sender<ConnectionStatus>>,
+    observers: Observers,
 ) -> Report {
+    let Observers { status, lifecycle } = observers;
     let mut report = Report {
         retry_until_deadline: config.retry_until_deadline,
         ..Report::default()
@@ -501,6 +522,13 @@ async fn run_inner<S: Source>(
         report.error = Some(error);
         report.stop_reason = StopReason::Failed;
         publish_status(status.as_ref(), &report, ConnectionState::Stopped, None);
+        emit_lifecycle(
+            lifecycle.as_ref(),
+            LifecycleKind::Stopped,
+            &report,
+            None,
+            report.error.as_ref(),
+        );
         return report;
     }
     let started = Instant::now();
@@ -533,6 +561,13 @@ async fn run_inner<S: Source>(
                 ConnectionState::RetryWait,
                 Some(delay),
             );
+            emit_lifecycle(
+                lifecycle.as_ref(),
+                LifecycleKind::RetryScheduled,
+                &report,
+                Some(delay.as_millis().min(u64::MAX as u128) as u64),
+                Some(&error),
+            );
             tokio::select! { biased;
                 _ = cancel.cancelled() => { report.stop_reason = StopReason::Cancelled; break; },
                 _ = sleep_until(deadline) => { report.error = Some(error.clone()); break; },
@@ -546,6 +581,13 @@ async fn run_inner<S: Source>(
             retry_attempt = retry_attempt.saturating_add(1);
         }
         publish_status(status.as_ref(), &report, ConnectionState::Connecting, None);
+        emit_lifecycle(
+            lifecycle.as_ref(),
+            LifecycleKind::Connecting,
+            &report,
+            None,
+            None,
+        );
         let connected = tokio::select! { biased;
             _ = cancel.cancelled() => { report.stop_reason = StopReason::Cancelled; break; },
             _ = sleep_until(deadline) => { report.error = Some(Failure::new(Code::Timeout, "run_deadline_connect", false)); break; },
@@ -592,8 +634,16 @@ async fn run_inner<S: Source>(
             ConnectionState::AwaitingEvents,
             None,
         );
+        emit_lifecycle(
+            lifecycle.as_ref(),
+            LifecycleKind::Connected,
+            &report,
+            None,
+            None,
+        );
         let mut health = SessionHealth {
             status: status.clone(),
+            lifecycle: lifecycle.clone(),
             ..SessionHealth::default()
         };
         let outcome = tokio::select! { biased;
@@ -606,6 +656,17 @@ async fn run_inner<S: Source>(
         report.gift_streak_evictions += p.streak_evictions - before.2;
         report.gift_streak_resyncs += p.streak_resyncs - before.3;
         publish_status(status.as_ref(), &report, ConnectionState::Stopping, None);
+        if let Err(error) = &outcome {
+            report.possible_gaps += 1;
+            report.last_connection_error = Some(error.clone());
+            emit_lifecycle(
+                lifecycle.as_ref(),
+                LifecycleKind::Interrupted,
+                &report,
+                None,
+                Some(error),
+            );
+        }
         if health.decoder.shutdown().await {
             report.decoder_jobs_drained_on_stop += 1;
         }
@@ -622,7 +683,6 @@ async fn run_inner<S: Source>(
                     retry_attempt = 0;
                     report.retry_budget_resets += 1;
                 }
-                report.possible_gaps += 1;
                 failure = Some(error);
             }
         }
@@ -644,7 +704,26 @@ async fn run_inner<S: Source>(
     }
     report.elapsed_ms = started.elapsed().as_millis() as u64;
     publish_status(status.as_ref(), &report, ConnectionState::Stopped, None);
+    emit_lifecycle(
+        lifecycle.as_ref(),
+        LifecycleKind::Stopped,
+        &report,
+        None,
+        report.error.as_ref(),
+    );
     report
+}
+
+fn emit_lifecycle(
+    sender: Option<&LifecycleSender>,
+    kind: LifecycleKind,
+    report: &Report,
+    delay: Option<u64>,
+    error: Option<&Failure>,
+) {
+    if let Some(sender) = sender {
+        sender.emit(kind, report, delay, error);
+    }
 }
 
 async fn send<S: AsyncRead + AsyncWrite + Unpin>(
@@ -781,6 +860,13 @@ async fn session<S: AsyncRead + AsyncWrite + Unpin>(
                     if health.ready_at.is_none() {
                         health.ready_at = Some(now);
                         report.ready_connections += 1;
+                        emit_lifecycle(
+                            health.lifecycle.as_ref(),
+                            LifecycleKind::Ready,
+                            report,
+                            None,
+                            None,
+                        );
                         publish_status(
                             health.status.as_ref(),
                             report,
@@ -921,6 +1007,7 @@ struct SessionHealth {
     ready_at: Option<Instant>,
     last_batch: Option<Instant>,
     status: Option<watch::Sender<ConnectionStatus>>,
+    lifecycle: Option<LifecycleSender>,
 }
 impl SessionHealth {
     fn was_stable(&self, interval: Duration) -> bool {

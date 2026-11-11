@@ -1,6 +1,6 @@
 # Architecture and engineering decisions
 
-Developed by Tri Nguyen. These notes describe the 0.8.0 engine.
+Developed by Tri Nguyen. These notes describe the 0.9.0 engine.
 
 ## Boundaries
 
@@ -12,6 +12,7 @@ Developed by Tri Nguyen. These notes describe the 0.8.0 engine.
 | `src/protocol.rs`, `src/protocol/view.rs` | Bound and validate wire frames, gzip and Protobuf envelopes |
 | `src/lib.rs`, `src/event_data.rs` | Normalize supported events; maintain finite per-room dedupe/combo state |
 | `src/metadata.rs`, `src/metadata/models.rs` | Validate and expose selected sender/like metadata |
+| `src/lifecycle.rs` | Bounded ordered reconnect observations with explicit lag, independent of event backpressure |
 | `src/main.rs` | Parse CLI arguments and write NDJSON events, health snapshots and aggregate reports |
 
 The `Source` trait separates transport from supervision. Offline tests substitute
@@ -48,6 +49,12 @@ and counted. Unknown protocol fields remain ignored.
 An open socket or heartbeat alone does not establish readiness. Health separates
 opening a socket, waiting for webcast batches, receiving, retry waits and stopping.
 Watch snapshots coalesce, so a slow observer does not accumulate history.
+
+An optional lifecycle broadcast ring retains 64 transitions and reports lag to a
+slow observer. It emits socket-open, readiness, session interruption, retry and
+terminal observations without blocking the supervisor. This makes a reconnect
+observable before another event arrives. Existing watch snapshots and event
+queues preserve their contracts. See [ordering and overflow](RECONNECTS.md).
 
 Event enqueueing has a shared per-batch grace deadline. A blocked/closed consumer
 is an explicit failure. The engine does not silently discard output to keep running.

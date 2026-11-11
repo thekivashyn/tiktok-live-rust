@@ -2,7 +2,7 @@
 
 **Developed by Tri Nguyen**
 
-Current engine version: **0.8.0**. These are local development versions, not a
+Current engine version: **0.9.0**. These are local development versions, not a
 claim of published packages or Git release tags.
 
 History through 0.8.0 was reconstructed on **2026-11-05 (Asia/Saigon)** from the
@@ -16,6 +16,28 @@ documentation remains in [README](README.md). Reports under `reports/` are ignor
 by Git and may be absent in another checkout; summaries here remain readable.
 
 ## Unreleased
+
+### v0.9.0 reconnect lifecycle — implementation in progress, 2026-11-11
+
+- Addresses [issue #1](https://github.com/thekivashyn/tiktok-live-rust/issues/1):
+  opt-in typed lifecycle notifications, including reconnects with no later event.
+- Adds `engine::run_observed` / `Observers`, `lifecycle::channel()` and CLI
+  `--lifecycle`. Existing entry points and event JSON stay compatible.
+- Retains 64 lifecycle notifications; slow Rust consumers receive explicit
+  `Lagged(n)` and the CLI writes tagged `lifecycle_lagged` records. No blocking
+  ingestion, unbounded queues or implicit lossless-notification claim.
+- Updates Rust/Python consumers to keep the same subscription, flag incomplete
+  application views and distinguish reconnect/readiness from terminal stops.
+- Thanks to [@Rhytera on X](https://x.com/Rhytera) for the feedback that prompted
+  clearer reconnect visibility and consumer gap handling.
+- Validation in progress. Windows checks for the initial implementation passed;
+  final Windows v0.9.0 checks passed: 100 Rust tests, 11 Python tests, formatting,
+  Clippy with denied warnings, release CLI/examples build and offline demo consumed
+  by Python. Source manifest/local links passed for 94 selected files.
+  Windows/Linux/macOS CI remains to be completed before publication.
+- Limits: no upstream replay/backfill or new LIVE/performance claim. `gap_recovery`
+  remains false. See `docs/RECONNECTS.md` for observation/ordering/overflow semantics.
+
 
 ### Follow-up audit and runnable onboarding — 2026-11-10
 

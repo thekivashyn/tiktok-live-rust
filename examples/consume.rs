@@ -4,6 +4,7 @@ use anyhow::{Context, Result, bail};
 use std::collections::BTreeMap;
 use tiktok_live_rust::{
     engine::{self, Config, Target},
+    lifecycle::{self, LifecycleKind, RecvError},
     transport::DirectSource,
 };
 use tokio::sync::mpsc;
@@ -24,7 +25,8 @@ async fn main() -> Result<()> {
     });
     let (sender, mut receiver) = mpsc::channel(256);
     let (status, mut observer) = engine::status_channel();
-    let engine = engine::run_with_status(
+    let (lifecycle, mut notifications) = lifecycle::channel();
+    let engine = engine::run_observed(
         &source,
         Target::User(username),
         Config {
@@ -33,8 +35,36 @@ async fn main() -> Result<()> {
         },
         Some(sender),
         cancel,
-        status,
+        engine::Observers {
+            status: Some(status),
+            lifecycle: Some(lifecycle),
+        },
     );
+    let recovery = async {
+        let mut view_may_be_incomplete = false;
+        let mut skipped_notifications = 0u64;
+        loop {
+            match notifications.recv().await {
+                Ok(event) => {
+                    // Keep the SAME event receiver through retries; no resubscribe.
+                    // Connected means socket-open; Ready means a webcast batch arrived.
+                    if event.kind == LifecycleKind::Interrupted || event.possible_gaps > 0 {
+                        view_may_be_incomplete = true;
+                    }
+                    // A fresh event after Ready does not repair missed upstream events.
+                    // Reconcile application state only with an authoritative source.
+                    // Stopped is terminal: inspect the report before deciding to restart.
+                }
+                Err(RecvError::Lagged(n)) => {
+                    skipped_notifications += n;
+                    view_may_be_incomplete = true;
+                    // Resume draining retained notifications; use status/report to resync.
+                }
+                Err(RecvError::Closed) => break,
+            }
+        }
+        serde_json::json!({"view_may_be_incomplete": view_may_be_incomplete, "skipped_notifications": skipped_notifications})
+    };
     let health = async {
         let mut latest = observer.borrow().clone();
         while observer.changed().await.is_ok() {
@@ -54,12 +84,12 @@ async fn main() -> Result<()> {
         }
         counts
     };
-    let (report, counts, last_status) = tokio::join!(engine, consumer, health);
+    let (report, counts, last_status, recovery) = tokio::join!(engine, consumer, health, recovery);
     signal_task.abort();
     println!(
         "{}",
         serde_json::to_string_pretty(
-            &serde_json::json!({"events_consumed": counts, "last_status": last_status, "report": report})
+            &serde_json::json!({"events_consumed": counts, "last_status": last_status, "recovery": recovery, "report": report})
         )?
     );
     if report.error.is_some() {
