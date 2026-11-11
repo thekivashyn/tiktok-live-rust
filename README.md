@@ -208,9 +208,10 @@ and the tradeoff between bounded gift history and exact quantity accounting.
 
 ## Evidence, with its scope attached
 
-Current CI checks offline Rust/Python tests, source-manifest/document links,
-Clippy, formatting, release builds and CLI/demo integration on three platforms.
-It does not contact TikTok.
+For v0.9.0, [CI run 43033800758](https://github.com/thekivashyn/tiktok-live-rust/actions/runs/43033800758)
+passed 100 Rust tests and 11 Python tests per OS on Windows, Linux and macOS
+(Apple Silicon), plus source-manifest/document links, Clippy, formatting, release
+builds and CLI/demo integration. These checks do not contact TikTok.
 
 | Recorded experiment | Result | What it establishes |
 | --- | --- | --- |
@@ -218,7 +219,7 @@ It does not contact TikTok.
 | 0.7.1 matched loopback comparison | 120,218 events/s Rust vs 75,683 for Connector 2.5.0 + adapter | Median of three pairs for the specified synthetic local receive path |
 | Same 0.7.1 comparison | Peak receiver working set: 6.76 MiB vs 135.70 MiB | Process memory for that workload, including the respective consumer/adapter |
 
-The benchmark numbers belong to **0.7.1**, not a fresh 0.8.0 performance run.
+The benchmark numbers belong to **0.7.1**, not a fresh 0.9.0 performance run.
 Original 0.7.1 binaries/raw reports are not included in this checkout; rerunning
 the harness measures the current source, rather than recreating those artifacts.
 The adapter supplies equivalent application policies; these are not claims about

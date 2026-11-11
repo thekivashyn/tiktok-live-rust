@@ -2,8 +2,9 @@
 
 **Developed by Tri Nguyen**
 
-Current engine version: **0.9.0**. These are local development versions, not a
-claim of published packages or Git release tags.
+Current engine version: **0.9.0**. Historical entries include pre-publication
+development versions. Published source releases are listed on
+[GitHub Releases](https://github.com/thekivashyn/tiktok-live-rust/releases).
 
 History through 0.8.0 was reconstructed on **2026-11-05 (Asia/Saigon)** from the
 existing README and retained reports. Earlier entries summarize that evidence;
@@ -17,27 +18,71 @@ by Git and may be absent in another checkout; summaries here remain readable.
 
 ## Unreleased
 
-### v0.9.0 reconnect lifecycle — implementation in progress, 2026-11-11
+No pending implementation changes.
+
+## 0.9.0 — Consumer-visible reconnect lifecycle
+
+Recorded: **2026-11-11 (Asia/Saigon)**. Status: validated with synthetic fixtures
+and native cross-platform CI; no new LIVE observation or performance measurement.
+
+### Change and reason
 
 - Addresses [issue #1](https://github.com/thekivashyn/tiktok-live-rust/issues/1):
-  opt-in typed lifecycle notifications, including reconnects with no later event.
+  opt-in typed lifecycle notifications expose reconnects even when no subsequent
+  application event arrives. The existing event subscription survives retries.
 - Adds `engine::run_observed` / `Observers`, `lifecycle::channel()` and CLI
-  `--lifecycle`. Existing entry points and event JSON stay compatible.
-- Retains 64 lifecycle notifications; slow Rust consumers receive explicit
-  `Lagged(n)` and the CLI writes tagged `lifecycle_lagged` records. No blocking
-  ingestion, unbounded queues or implicit lossless-notification claim.
-- Updates Rust/Python consumers to keep the same subscription, flag incomplete
-  application views and distinguish reconnect/readiness from terminal stops.
-- Thanks to [@Rhytera on X](https://x.com/Rhytera) for the feedback that prompted
-  clearer reconnect visibility and consumer gap handling.
-- Validation in progress. Windows checks for the initial implementation passed;
-  final Windows v0.9.0 checks passed: 100 Rust tests, 11 Python tests, formatting,
-  Clippy with denied warnings, release CLI/examples build and offline demo consumed
-  by Python. Source manifest/local links passed for 94 selected files.
-  Windows/Linux/macOS CI remains to be completed before publication.
-- Limits: no upstream replay/backfill or new LIVE/performance claim. `gap_recovery`
-  remains false. See `docs/RECONNECTS.md` for observation/ordering/overflow semantics.
+  `--lifecycle`: connecting, connected, ready, interrupted, retry_scheduled, stopped.
+- Retains 64 lifecycle notifications without blocking ingestion; slow Rust readers
+  receive explicit `Lagged(n)`, and CLI readers receive tagged `lifecycle_lagged`.
+  Retained records drain before the CLI's final report. No durable/lossless log claim.
+- Updates Rust/Python consumers to preserve their subscription, conservatively flag
+  incomplete views and distinguish socket-open/readiness from terminal failure.
+- Thanks to **[@Rhytera on X](https://x.com/Rhytera)** for the thoughtful feedback
+  that helped improve reconnect visibility and consumer gap handling.
 
+### Compatibility
+
+- Existing `run` / `run_with_status`, event JSON, configuration defaults and locked
+  registry dependency versions stay compatible. New observations are opt-in.
+- Python example now requests `--lifecycle`; rebuild/use the v0.9.0 CLI with it.
+- Events and lifecycle use separate channels/pipes. Lifecycle counters are local
+  boundary watermarks, not consumer acknowledgements or upstream-loss counts.
+
+### Validation and evidence
+
+- Local Windows: `cargo test --all-targets --locked` passed **100 Rust tests**;
+  `python -m unittest discover -s tests -p "test_*.py" -v` passed **11 tests**.
+  All-target Clippy with `-D warnings`, formatting, release CLI/examples build,
+  CLI help/version and the offline Rust-to-Python demo passed (six events, exit 0).
+- [CI run 43033800758](https://github.com/thekivashyn/tiktok-live-rust/actions/runs/43033800758)
+  passed on **Windows, Linux and macOS (Apple Silicon)** at source commit
+  `ae7818924f2053fba0db4518df704f55b01131c8`: 100 Rust + 11 Python tests per OS,
+  source manifest/local links, formatting, denied-warning Clippy, release builds,
+  CLI help/version and offline Rust-to-Python integration. Completed job logs were
+  inspected to verify counts, v0.9.0 output and successful demo consumption.
+- Regressions cover reconnect before another event, room/epoch boundaries and
+  unchanged event receiver, notification overflow, retry exhaustion, cancellation,
+  observer drop, application-consumer backpressure, diagnostic write failures and
+  draining lifecycle records before a ready final report.
+- Source manifest/local links passed for 94 selected files. Local logs/hashes:
+  `reports/reconnect-lifecycle-v0.9.0-20261111/`; CI logs/status summaries retained
+  locally under `artifacts/tiktok-live-rust-reconnect-followup-20261111/` in the
+  parent workspace. Release finalization changes only docs/manifest (`[skip ci]`);
+  runtime, tests, dependency lock and workflow remain identical to the tested SHA.
+
+### Limits and handoff
+
+- No replay/backfill service: `gap_recovery` remains false. Reconnect/readiness
+  cannot recover source events never received. Observer lag counts notifications,
+  not source events; a fresh event does not repair an incomplete application view.
+- No new TikTok LIVE or performance run, no Intel-macOS execution claim, no
+  crates.io publish or prebuilt executable assets. Existing historical results
+  retain their original scope. See [reconnect contracts](docs/RECONNECTS.md).
+- No unfinished implementation for this issue remains.
+
+## Earlier publication notes — 2026-11-10
+
+The following records predate v0.9.0 and retain their original validation scope.
 
 ### Follow-up audit and runnable onboarding — 2026-11-10
 
